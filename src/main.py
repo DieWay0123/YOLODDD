@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import mediapipe as mp
 import os
+import time
 
 from ultralytics import YOLO
 
@@ -40,14 +41,20 @@ options = FaceLandmarkerOptions(
     running_mode=VisionRunningMode.IMAGE
 )
 
-# create instance of FaceLandmarker  
+#Create instance of FaceLandmarker  
 landmarker = FaceLandmarker.create_from_options(options)
 
+#Capture image from cam
 cap = cv2.VideoCapture(CAMERA_DEVICE_NUMBER)
 
+#YOLO model
 model = YOLO(PREDICTION_MODEL_PATH)
 
+total_time = 0
+total_frames = 0
+
 while cap.isOpened():
+    time_start = time.time()
     success, frame = cap.read() # read frame
     
     '''
@@ -91,8 +98,8 @@ while cap.isOpened():
         #cv2.rectangle(frame, (left_x, left_y), (left_x + left_w, left_y + left_h), (0, 255, 0), 2)
         
         #------------------Test fixed-size img---------------
-        fixed_size_x = 39 #25
-        fixed_size_y = 39 #10
+        fixed_size_x = 32 #25
+        fixed_size_y = 32 #10
         left_eye_mid = face_landmarks[473]
         left_eye_mid_pt_x = int(left_eye_mid.x*W)
         left_eye_mid_pt_y = int(left_eye_mid.y*H)
@@ -106,13 +113,25 @@ while cap.isOpened():
         #cv2.rectangle(frame, (right_x, right_y), (right_x+right_w, right_y+right_h), (0, 255, 0), 2)
 
     try:
-        left_eye_img_gs = cv2.cvtColor(left_eye_img, cv2.COLOR_BGR2GRAY)
-        data = [left_eye_img_gs]
+        left_eye_img = cv2.cvtColor(left_eye_img, cv2.COLOR_BGR2GRAY)
+        data = [left_eye_img]
         results = model.predict(data)
         for result in results:
             result.show()
     except:
         pass
+
+    time_end = time.time()
+    time_delta = time_end - time_start
+
+    total_time = total_time + time_delta
+    total_frames = total_frames + 1
+
+    fps = total_frames / total_time
+
+    #Average process time on rtx 3050 laptop ~= 0.03 sec
+    print(f"Process time of current frame: {time_delta} secs")
+    print(f"Current FPS: {fps}")
 
     '''
     if flag is True and len(left_eye_img) != 0:
