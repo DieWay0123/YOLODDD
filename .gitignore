@@ -208,3 +208,6 @@ pip-selfcheck.json
 *.jpg
 *.jpeg
 *.png
+
+*.wav
+*.mp3
