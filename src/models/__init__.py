@@ -1,1 +1,1 @@
-from .drowsy_detecter import DrowsyDetecter
+from .drowsy_detecter import DrowsyDetector
