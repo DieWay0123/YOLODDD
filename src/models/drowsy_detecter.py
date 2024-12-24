@@ -366,6 +366,7 @@ class DrowsyDetector(object):
 
             #取得臉部的位置並更新
             self._update_detected_face()
+            mouth_face_ratio = None
 
             #如果有偵測到臉
             if self.face_detected:
@@ -479,6 +480,12 @@ class DrowsyDetector(object):
             total_frames += 1
             fps = int(total_frames / total_secs)
 
+            #!ADD
+            if mouth_face_ratio is not None:
+                text = f"Yawn Ratio: {mouth_face_ratio}"
+                frame_writer.move_cursor(Direction.DOWN, 40)
+                frame_writer.write_text(self._output_frame, text, cv2.FONT_HERSHEY_SIMPLEX, 1, Color.RED, 2, 1)
+
             text = f"Yawn count: {yawn_count}"
             frame_writer.move_cursor(Direction.DOWN, 40)
             frame_writer.write_text(self._output_frame, text, cv2.FONT_HERSHEY_SIMPLEX, 1, Color.RED, 2, 1)
@@ -486,11 +493,6 @@ class DrowsyDetector(object):
             text = f"FPS: {fps}"
             frame_writer.move_cursor(Direction.DOWN, 40)
             frame_writer.write_text(self._output_frame, text, cv2.FONT_HERSHEY_SCRIPT_SIMPLEX, 1, Color.BLUE, 2, 1)
-
-            #!ADD
-            text = f"Yawn Ratio: {mouth_face_ratio}"
-            frame_writer.move_cursor(Direction.DOWN, 40)
-            frame_writer.write_text(self._output_frame, text, cv2.FONT_HERSHEY_SIMPLEX, 1, Color.RED, 2, 1)
 
             cv2.imshow("DROWSY DETECTION", self._output_frame)
             if cv2.waitKey(1) == 27: # press ESC to leave
