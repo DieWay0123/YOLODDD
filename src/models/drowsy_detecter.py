@@ -33,6 +33,9 @@ class DetectionInfo(Enum):
     RIGHT_EYE_NOT_DETECTED = "Right eye not detected"
     MOUTH_NOT_DETECTED = "Mouth not detected"
 
+    DROWSY = "You are drowsy"
+    BEEP = "Beep! Beep! Beep!"
+
 
 class FrameWriter(object):
     def __init__(self, initial_x: int, initial_y: int):
@@ -332,7 +335,7 @@ class DrowsyDetector(object):
 
                         text = f'{label}: {name} ({confidence})'
                         frame_writer.move_cursor(Direction.DOWN, 40)
-                        frame_writer.write_text(self._output_frame, text, cv2.FONT_HERSHEY_SIMPLEX, 1, Color.RED, 2, 1)
+                        frame_writer.write_text(self._output_frame, text, cv2.FONT_HERSHEY_SIMPLEX, 1, Color.GREEN, 2, 1)
                         
                         #左眼
                         if idx == 0:
@@ -358,9 +361,8 @@ class DrowsyDetector(object):
                             eyes_closed_long = False
                             
                     if eyes_closed_long:
-                        text = "Beep! Beep! Beep!"
                         frame_writer.move_cursor(Direction.DOWN, 40)
-                        frame_writer.write_text(self._output_frame, text, cv2.FONT_HERSHEY_SIMPLEX, 1, Color.RED, 2, 1)
+                        frame_writer.write_text(self._output_frame, DetectionInfo.BEEP.value, cv2.FONT_HERSHEY_SIMPLEX, 1, Color.RED, 2, 1)
                     if yawn:
                         yawn_frames += 1
                         if yawn_frames >= self.YAWN_FRAME_THRES and not yawn_long:
@@ -372,9 +374,8 @@ class DrowsyDetector(object):
 
                     #打哈欠的次數太多
                     if yawn_count >= self.YAWN_COUNT_THRES:
-                        text = "You are drowsy"
                         frame_writer.move_cursor(Direction.DOWN, 40)
-                        frame_writer.write_text(self._output_frame, text, cv2.FONT_HERSHEY_SIMPLEX, 1, Color.RED, 2, 1)
+                        frame_writer.write_text(self._output_frame, DetectionInfo.DROWSY.value, cv2.FONT_HERSHEY_SIMPLEX, 1, Color.RED, 2, 1)
                 else:
                     #左眼未被偵測到
                     if not self.left_eye_detected:
@@ -407,7 +408,7 @@ class DrowsyDetector(object):
 
             text = f"FPS: {fps}"
             frame_writer.move_cursor(Direction.DOWN, 40)
-            frame_writer.write_text(self._output_frame, text, cv2.FONT_HERSHEY_SCRIPT_SIMPLEX, 1, Color.BLUE, 1, 2)
+            frame_writer.write_text(self._output_frame, text, cv2.FONT_HERSHEY_SCRIPT_SIMPLEX, 1, Color.BLUE, 2, 1)
 
             cv2.imshow("DROWSY DETECTION", self._output_frame)
             if cv2.waitKey(1) == 27: # press ESC to leave
