@@ -9,11 +9,11 @@ from ultralytics import YOLO
 
 LEFT_EYE_LANDMARKS = [249, 263, 362, 373, 374, 380, 381, 382, 384, 385, 386, 387, 388, 390, 398, 466]
 RIGHT_EYE_LANDMARKS = [7, 33, 133, 144, 145, 153, 154, 155, 157, 158, 159, 160, 161, 163, 173, 246]
-MOUTH_LANDMARKS = [61, 291]
+MOUTH_LANDMARKS = [61, 291, 13, 14] #!ADD 13 14
 
 INNER_LIP_LANDMARKS = [78, 191, 80, 81, 82, 13, 312, 311, 310, 415, 308, 324, 318, 402, 317, 14, 87, 178, 88, 95]
 
-CAMERA_DEVICE_NUMBER = 1
+CAMERA_DEVICE_NUMBER = 0
 
 DETECTION_MODELS_ROOT_PATH = "d_models"
 PREDICTION_MODELS_ROOT_PATH = "models"
@@ -77,31 +77,38 @@ cap = cv2.VideoCapture(CAMERA_DEVICE_NUMBER)
 eyes_model = YOLO(EYES_PREDICTION_MODEL_PATH)
 mouth_model = YOLO(MOUTH_PREDICTION_MODEL_PATH)
 
-eyes_model = eyes_model.cuda()
-mouth_model = mouth_model.cuda()
+#! Use if you have GPU support cuda
+#eyes_model = eyes_model.cuda()
+#mouth_model = mouth_model.cuda()
 
 detector = DrowsyDetector(
-    cap, 
-    landmarker, 
-    LEFT_EYE_LANDMARKS, 
-    263, 
-    362, 
-    473, 
-    RIGHT_EYE_LANDMARKS, 
-    33, 
-    133, 
-    468, 
-    1.2, 
-    MOUTH_LANDMARKS, 
-    61, 
-    291, 
-    1.4, 
-    eyes_model, 
-    "close eyes", 
-    "open eyes", 
-    mouth_model, 
-    "no yawn", 
-    "yawn"
+    camera=cap, 
+    face_detection_model=landmarker, 
+    left_eye_landmarks=LEFT_EYE_LANDMARKS, 
+    left_eye_kp_l=263, 
+    left_eye_kp_r=362, 
+    left_eye_kp_mid=473, 
+    right_eye_landmarks=RIGHT_EYE_LANDMARKS, 
+    right_eye_kp_l=33, 
+    right_eye_kp_r=133, 
+    right_eye_kp_mid=468, 
+    eyes_offset=1.2, 
+    mouth_landmarks=MOUTH_LANDMARKS, 
+    mouth_kp_l=61, 
+    mouth_kp_r=291, 
+    mouth_offset=1.4, 
+    eyes_classification_model=eyes_model, 
+    eyes_closed_label="close eyes", 
+    eyes_open_label="open eyes", 
+    mouth_classification_model=mouth_model, 
+    mouth_closed_label="no yawn", 
+    mouth_open_label="yawn",
+    lip_kp_up=13,
+    lip_kp_down=14,
+    face_landmarks=[10, 152],
+    face_kp_up=10,
+    face_kp_down=152,
+    yawn_ratio_threshold=0.15
 )
 
 detector.run()
