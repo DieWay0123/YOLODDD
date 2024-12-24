@@ -356,10 +356,12 @@ class DrowsyDetector(object):
                         if eyes_closed_frames >= self.EYES_CLOSED_FRAME_THRES and not eyes_closed_long:
                             eyes_closed_long = True
                     else:
-                        eyes_closed_frames = 0
-                        if eyes_closed_frames <= 0:
+                        if eyes_closed_long:
+                            eyes_closed_frames = 0
                             eyes_closed_long = False
-                            
+                        else:
+                            eyes_closed_frames = max(0, eyes_closed_frames - 5)
+
                     if eyes_closed_long:
                         frame_writer.move_cursor(Direction.DOWN, 40)
                         frame_writer.write_text(self._output_frame, DetectionInfo.BEEP.value, cv2.FONT_HERSHEY_SIMPLEX, 1, Color.RED, 2, 1)
@@ -369,8 +371,11 @@ class DrowsyDetector(object):
                             yawn_count += 1
                             yawn_long = True
                     else:
-                        yawn_frames = 0
-                        yawn_long = False
+                        if yawn_long:
+                            yawn_frames = 0
+                            yawn_long = False
+                        else:
+                            yawn_frames = max(0, yawn_frames - 5)
 
                     #打哈欠的次數太多
                     if yawn_count >= self.YAWN_COUNT_THRES:
