@@ -14,7 +14,7 @@ DATASETS_ROOT_DIR = "datasets"
 DATASETS_PATH = os.path.join(DATASETS_ROOT_DIR, TRAIN_TYPE)
 
 IMG_SIZE = 96
-EPOCHS = 20
+EPOCHS = 10
 BATCH_SIZE = 80
 OPTIMIZER = "sgd"
 LEARNING_RATE = 0.001
@@ -24,6 +24,7 @@ MODELS_EXPORT_DIR = os.path.join(MODELS_ROOT_DIR, TRAIN_TYPE)
 
 
 model = YOLO(model=PRETRAINED_WEIGHT_PATH, verbose=True)
+model.cuda()
 
 results = model.train(data=DATASETS_PATH, epochs=EPOCHS, batch=BATCH_SIZE, imgsz=IMG_SIZE, optimizer=OPTIMIZER, lr0=LEARNING_RATE)
 
