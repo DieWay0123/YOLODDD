@@ -6,6 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 import cv2
 import time
+import math
 
 import mediapipe as mp
 
@@ -34,6 +35,7 @@ class DetectionInfo(Enum):
     MOUTH_NOT_DETECTED = "Mouth not detected"
 
 
+#camera畫面資訊呈現
 class FrameWriter(object):
     def __init__(self, initial_x: int, initial_y: int):
         self._initial_x = initial_x
@@ -49,10 +51,12 @@ class FrameWriter(object):
     def y(self) -> int:
         return self._y
     
+    #重新調整畫面資訊寫入位置
     def reset_cursor(self) -> None:
         self._x = self._initial_x
         self._y = self._initial_y
-
+    
+    #控制資訊寫入位置
     def move_cursor(self, direction: Direction, value: int) -> None:
         if direction == Direction.UP:
             self._y -= value
@@ -63,6 +67,7 @@ class FrameWriter(object):
         elif direction == Direction.RIGHT:
             self._x += value
 
+    #將資訊呈現在camera畫面
     def write_text(self, frame: cv2.typing.MatLike, text: str, font: int, font_scale: float, color: Color, thickness: float, line_type: int):
         cv2.putText(frame, text, (self._x, self._y), font, font_scale, color.value, thickness, line_type)
 
@@ -94,7 +99,14 @@ class DrowsyDetector(object):
         eyes_open_label: str, 
         mouth_classification_model: YOLO, 
         mouth_closed_label: str, 
-        mouth_open_label: str
+        mouth_open_label: str,
+        #!ADD
+        lip_kp_up: int,
+        lip_kp_down: int,
+        face_landmarks: list[int],
+        face_kp_up: int,
+        face_kp_down: int,
+        yawn_ratio_threshold: float
     ):
         '''
         camera: 攝影機物件
@@ -158,25 +170,42 @@ class DrowsyDetector(object):
         self._frame: cv2.typing.MatLike | None = None
         self._output_frame: cv2.typing.MatLike | None = None
 
+        #!ADD
+        self._lip_kp_up = lip_kp_up
+        self._lip_kp_down = lip_kp_down
+        self._lip_distance: float | None = None
+
+        self._face_landmarks = face_landmarks
+        self._face_kp_up = face_kp_up
+        self._face_kp_down = face_kp_down
+        self._face_distance: float | None = None
+
+        self._yawn_ratio_threshold = yawn_ratio_threshold
+
     def _func_exec(self, func: Callable, *args, **kwargs):
         func(*args, **kwargs)
 
+    #是否正確開啟相機讀取frame圖片
     @property
     def frame_captured(self) -> bool:
         return True if self._frame else False
 
+    #Mediapipe是否正確檢測到臉部
     @property
     def face_detected(self) -> bool:
         return True if self._face else False
     
+    #判斷是否正確檢測到左眼在相機畫面中
     @property
     def left_eye_detected(self) -> bool:
         return True if self._left_eye_image is not None and self._left_eye_image.size > 0 else False
     
+    #判斷是否正確檢測到右眼在相機畫面中
     @property
     def right_eye_detected(self) -> bool:
         return True if self._right_eye_image is not None and self._right_eye_image.size > 0 else False
     
+    #判斷是否正確檢測到嘴巴在相機畫面中
     @property
     def mouth_detected(self) -> bool:
         return True if self._mouth_image is not None and self._mouth_image.size > 0 else False
@@ -198,6 +227,7 @@ class DrowsyDetector(object):
         else:
             self._face = None
 
+    #更新畫面提取之眼睛和嘴巴特徵圖像
     def _update_left_eye_image(self) -> None:
         H, W, _ = self._frame.shape
 
@@ -262,6 +292,44 @@ class DrowsyDetector(object):
         cv2.circle(self._output_frame, (mid_pt_x, mid_pt_y), 5, Color.CYAN.value, 2)
         cv2.rectangle(self._output_frame, (mid_pt_x-x, mid_pt_y-y), (mid_pt_x+x+1, mid_pt_y+y+1), Color.GREEN.value, 2)
 
+    #!ADD
+    def _calculate_mouth_distance(self)->float:
+      H, W, _ = self._frame.shape
+
+      mouth = [self._face[i] for i in self._mouth_landmarks]
+      face = [self._face[i] for i in self._face_landmarks]
+
+      face_xu_idx = self._face_landmarks.index(self._face_kp_up)
+      face_xd_idx = self._face_landmarks.index(self._face_kp_down)
+
+      face_xu = int(face[face_xu_idx].x * W)
+      face_xd = int(face[face_xd_idx].x * W)
+      face_yu = int(face[face_xu_idx].y * H)
+      face_yd = int(face[face_xd_idx].y * H)
+
+      self._face_distance = math.sqrt((face_xu-face_xd)**2+(face_yu-face_yd)**2)
+
+      xu_idx = self._mouth_landmarks.index(self._lip_kp_up)
+      xd_idx = self._mouth_landmarks.index(self._lip_kp_down)
+
+      xu = int(mouth[xu_idx].x * W)
+      xd = int(mouth[xd_idx].x * W)
+      yu = int(mouth[xu_idx].y * H)
+      yd = int(mouth[xd_idx].y * H)
+
+      self._lip_distance = math.sqrt((xu-xd)**2+(yu-yd)**2)
+
+      return self._lip_distance/self._face_distance
+    '''
+    #!TMP
+    def save_image(self) -> None:
+        cv2.imwrite('./pics/blocked_left_eye.png', self._left_eye_image)
+        cv2.imwrite('./pics/blocked_right_eye.png', self._right_eye_image)
+        cv2.imwrite('./pics/blocked_mouth.png', self._mouth_image)
+        cv2.imwrite('./pics/face.png', self._frame)
+        cv2.imwrite('./pics/blocked_capture_face.png', self._output_frame)
+    '''
+
     def run(self) -> None:
         frame_writer = FrameWriter(10, 10)
 
@@ -306,6 +374,8 @@ class DrowsyDetector(object):
 
                 #如果左右眼和嘴巴都有被偵測到
                 if self.left_eye_detected and self.right_eye_detected and self.mouth_detected:
+                    #self.save_image() #!ADD
+                    mouth_face_ratio = round(self._calculate_mouth_distance(), 2)#!ADD
 
                     eyes_data = [self._left_eye_image, self._right_eye_image]
                     mouth_data = [self._mouth_image]
@@ -334,18 +404,20 @@ class DrowsyDetector(object):
                         frame_writer.move_cursor(Direction.DOWN, 40)
                         frame_writer.write_text(self._output_frame, text, cv2.FONT_HERSHEY_SIMPLEX, 1, Color.RED, 2, 1)
 
-                        if idx == 0:
+                        #根據YOLO預測結果去做後續疲勞檢測判斷
+                        if idx == 0: #左眼
                             if name == self._eyes_closed_label:
                                 left_eye_closed = True
-                        elif idx == 1:
+                        elif idx == 1: #右眼
                             if name == self._eyes_closed_label:
                                 right_eye_closed = True
-                        elif idx == 2:
+                        elif idx == 2: #嘴巴
                             if name == self._mouth_open_label:
                                 yawn = True
 
                     if left_eye_closed and right_eye_closed:
                         eyes_closed_frames += 1
+                        #判斷若閉眼時間超過閥值則認定為長時間閉眼(疲勞)
                         if eyes_closed_frames >= self.EYES_CLOSED_FRAME_THRES and not eyes_closed_long:
                             eyes_closed_long = True
                     else:
@@ -357,7 +429,8 @@ class DrowsyDetector(object):
                         text = "Beep! Beep! Beep!"
                         frame_writer.move_cursor(Direction.DOWN, 40)
                         frame_writer.write_text(self._output_frame, text, cv2.FONT_HERSHEY_SIMPLEX, 1, Color.RED, 2, 1)
-                    if yawn:
+                    #!ADD
+                    if yawn and mouth_face_ratio > self._yawn_ratio_threshold:
                         yawn_frames += 1
                         if yawn_frames >= self.YAWN_FRAME_THRES and not yawn_long:
                             yawn_count += 1
@@ -404,6 +477,11 @@ class DrowsyDetector(object):
             text = f"FPS: {fps}"
             frame_writer.move_cursor(Direction.DOWN, 40)
             frame_writer.write_text(self._output_frame, text, cv2.FONT_HERSHEY_SCRIPT_SIMPLEX, 1, Color.BLUE, 1, 2)
+
+            #!ADD
+            text = f"Yawn Ratio: {mouth_face_ratio}"
+            frame_writer.move_cursor(Direction.DOWN, 40)
+            frame_writer.write_text(self._output_frame, text, cv2.FONT_HERSHEY_SIMPLEX, 1, Color.RED, 2, 1)
 
             cv2.imshow("DROWSY DETECTION", self._output_frame)
             if cv2.waitKey(1) == 27: # press ESC to leave
