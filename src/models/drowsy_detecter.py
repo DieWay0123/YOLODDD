@@ -69,7 +69,7 @@ class FrameWriter(object):
 
 class DrowsyDetector(object):
     EYES_CLOSED_FRAME_THRES = 30
-    YAWN_FRAME_THRES = 75
+    YAWN_FRAME_THRES = 60
     YAWN_COUNT_THRES = 10
 
     def __init__(
@@ -333,17 +333,21 @@ class DrowsyDetector(object):
                         text = f'{label}: {name} ({confidence})'
                         frame_writer.move_cursor(Direction.DOWN, 40)
                         frame_writer.write_text(self._output_frame, text, cv2.FONT_HERSHEY_SIMPLEX, 1, Color.RED, 2, 1)
-
+                        
+                        #左眼
                         if idx == 0:
                             if name == self._eyes_closed_label:
                                 left_eye_closed = True
+                        #右眼
                         elif idx == 1:
                             if name == self._eyes_closed_label:
                                 right_eye_closed = True
+                        #嘴巴
                         elif idx == 2:
                             if name == self._mouth_open_label:
                                 yawn = True
 
+                    #兩眼都閉
                     if left_eye_closed and right_eye_closed:
                         eyes_closed_frames += 1
                         if eyes_closed_frames >= self.EYES_CLOSED_FRAME_THRES and not eyes_closed_long:
